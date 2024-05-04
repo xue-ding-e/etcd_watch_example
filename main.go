@@ -65,8 +65,10 @@ func acquireLock(client *clientv3.Client, id string) {
 
 	// 判断是否获取到锁
 	if !resp.Succeeded {
-		// 如果获取失败，监听锁的释放
-		watchChan := watcher.Watch(context.Background(), "/cron/lock/job9")
+		// 如果获取失败，获取当前的全局Revision
+		rev := resp.Header.Revision
+		// 监听大于当前Revision的修改
+		watchChan := watcher.Watch(context.Background(), "/cron/lock/job9", clientv3.WithRev(rev+1))
 		for watchResp := range watchChan {
 			for _, event := range watchResp.Events {
 				if event.Type == clientv3.EventTypeDelete {
