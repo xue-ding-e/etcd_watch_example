@@ -42,16 +42,16 @@ func main() {
 	db.AutoMigrate(&Product{})
 
 	productID := "1"
-	totalTasks := 10200
-	concurrencyLimit := 50 // 设置并发限制为50
-	taskChannel := make(chan int, concurrencyLimit)
+	totalTasks := 500
+	//concurrencyLimit := 50 // 设置并发限制为50
+	//taskChannel := make(chan int, concurrencyLimit)
 	var wg sync.WaitGroup
-	wg.Add(totalTasks)
 	for i := range totalTasks {
-		taskChannel <- 1 // 会阻塞，直到有空闲位置
+		wg.Add(1)
+		//taskChannel <- 1 // 会阻塞，直到有空闲位置
 		go func() {
 			defer wg.Done()
-			defer func() { <-taskChannel }() // 完成时释放位置
+			//defer func() { <-taskChannel }() // 完成时释放位置
 			//获取session会话 (内部自动开启一个goroutine自动续约和维持心跳)
 			session, err := concurrency.NewSession(client)
 			if err != nil {
@@ -109,6 +109,7 @@ func main() {
 				}
 				//fmt.Println("successfully purchased")
 			} else {
+				tx.Rollback()
 				//fmt.Println("failed to purchase due to insufficient stock")
 				return
 			}
