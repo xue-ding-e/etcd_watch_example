@@ -2,15 +2,21 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	v3 "go.etcd.io/etcd/client/v3"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"ql_learnEtcd/concurrency"
 	"sync"
 	"time"
 )
 
 func main() {
+	type Product struct {
+		ID    string `gorm:"type:varchar(100);primary_key"`
+		Stock int    `gorm:"type:int"`
+		gorm.Model
+	}
 	var (
 		config v3.Config
 		client *v3.Client
@@ -28,14 +34,14 @@ func main() {
 	}
 
 	// 连接到MySQL数据库
-	db, err := sql.Open("mysql", "user:password@/dbname")
+	dsn := "root:123456@tcp(192.168.1.223:13306)/etcd_goods_test?parseTime=true"
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		fmt.Println("failed to connect to mysql:", err)
-		return
+		panic("failed to connect database")
 	}
-	defer db.Close()
+	db.AutoMigrate(&Product{})
 
-	productID := "product123"
+	productID := "1"
 	count := 10
 	var wg sync.WaitGroup
 	wg.Add(count)
@@ -43,7 +49,6 @@ func main() {
 		go func() {
 			defer wg.Done()
 
-			fmt.Println(i)
 			//获取session会话 (内部自动开启一个goroutine自动续约和维持心跳)
 			session, err := concurrency.NewSession(client)
 			if err != nil {
@@ -58,7 +63,7 @@ func main() {
 			defer cancel()
 
 			// 使用带有超时时间的上下文来尝试获取锁
-			if err := Locker.TryLock(ctx); err != nil {
+			if err := Locker.Lock(ctx); err != nil {
 				fmt.Println("failed to acquire lock:", err)
 				return
 			}
@@ -66,34 +71,35 @@ func main() {
 
 			//TODO 这里实现具体的业务逻辑
 			// 开始一个数据库事务
-			tx, err := db.Begin()
-			if err != nil {
-				fmt.Println("failed to begin transaction:", err)
+			fmt.Println(i)
+
+			tx := db.Begin()
+			if tx.Error != nil {
+				fmt.Println("failed to begin transaction:", tx.Error)
 				return
 			}
-
 			// 从数据库中读取库存数量
-			var stock int
-			err = tx.QueryRow("SELECT stock FROM products WHERE id = ?", productID).Scan(&stock)
-			if err != nil {
-				fmt.Println("failed to get stock:", err)
+			var product Product
+			result := tx.First(&product, "id = ?", productID)
+			if result.Error != nil {
+				fmt.Println("failed to get stock:", result.Error)
 				tx.Rollback()
 				return
 			}
 
-			if stock > 0 {
+			if product.Stock > 0 {
 				// 执行购买操作
-				_, err = tx.Exec("UPDATE products SET stock = stock - 1 WHERE id = ?", productID)
-				if err != nil {
-					fmt.Println("failed to update stock:", err)
+				result = tx.Model(&product).Update("stock", gorm.Expr("stock - ?", 1))
+				if result.Error != nil {
+					fmt.Println("failed to update stock:", result.Error)
 					tx.Rollback()
 					return
 				}
 
 				// 提交事务
-				err = tx.Commit()
-				if err != nil {
-					fmt.Println("failed to commit transaction:", err)
+				tx.Commit()
+				if tx.Error != nil {
+					fmt.Println("failed to commit transaction:", tx.Error)
 					return
 				}
 
