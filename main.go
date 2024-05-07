@@ -42,13 +42,16 @@ func main() {
 	db.AutoMigrate(&Product{})
 
 	productID := "1"
-	count := 10
+	totalTasks := 10200
+	concurrencyLimit := 50 // 设置并发限制为50
+	taskChannel := make(chan int, concurrencyLimit)
 	var wg sync.WaitGroup
-	wg.Add(count)
-	for i := range count {
+	wg.Add(totalTasks)
+	for i := range totalTasks {
+		taskChannel <- 1 // 会阻塞，直到有空闲位置
 		go func() {
 			defer wg.Done()
-
+			defer func() { <-taskChannel }() // 完成时释放位置
 			//获取session会话 (内部自动开启一个goroutine自动续约和维持心跳)
 			session, err := concurrency.NewSession(client)
 			if err != nil {
@@ -59,7 +62,8 @@ func main() {
 
 			Locker := concurrency.NewMutex(session, "product_lock_"+productID)
 			// 创建一个带有超时时间的上下文
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			//ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			// 使用带有超时时间的上下文来尝试获取锁
@@ -100,12 +104,13 @@ func main() {
 				tx.Commit()
 				if tx.Error != nil {
 					fmt.Println("failed to commit transaction:", tx.Error)
+					tx.Rollback()
 					return
 				}
-
-				fmt.Println("successfully purchased")
+				//fmt.Println("successfully purchased")
 			} else {
-				fmt.Println("failed to purchase due to insufficient stock")
+				//fmt.Println("failed to purchase due to insufficient stock")
+				return
 			}
 			//TODO END
 
@@ -113,4 +118,5 @@ func main() {
 
 	}
 	wg.Wait()
+	fmt.Println("over...")
 }
