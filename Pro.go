@@ -1,7 +1,7 @@
-//go:build pro
-
+// //go:build pro
 package main
 
-func ProPrintln(a ...interface{}) {
-	// do nothing
-}
+//
+//func ProPrintln(a ...interface{}) {
+//	// do nothing
+//}
