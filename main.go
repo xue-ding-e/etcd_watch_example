@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	v3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"ql_learnEtcd/concurrency"
 	"sync"
 	"time"
 )
