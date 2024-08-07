@@ -9,6 +9,8 @@ type Etcd struct {
 	Endpoints   []string      `mapstructure:"endpoints" json:"endpoints" yaml:"endpoints"`
 	DialTimeout time.Duration `mapstructure:"dial_timeout" json:"dial_timeout" yaml:"dial_timeout"`
 	LockTimeout time.Duration `mapstructure:"lock_timeout" json:"lock_timeout" yaml:"lock_timeout"`
+	Username    string        `yaml:"username" mapstructure:"username"`
+	Password    string        `yaml:"password" mapstructure:"password"`
 }
 
 type Config struct {
