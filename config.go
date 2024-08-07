@@ -1,11 +1,14 @@
 package main
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type Etcd struct {
-	Endpoints   []string `mapstructure:"endpoints" json:"endpoints" yaml:"endpoints"`
-	DialTimeout string   `mapstructure:"dial_timeout" json:"dial_timeout" yaml:"dial_timeout"`
-	LockTimeout string   `mapstructure:"lock_timeout" json:"lock_timeout" yaml:"lock_timeout"`
+	Endpoints   []string      `mapstructure:"endpoints" json:"endpoints" yaml:"endpoints"`
+	DialTimeout time.Duration `mapstructure:"dial_timeout" json:"dial_timeout" yaml:"dial_timeout"`
+	LockTimeout time.Duration `mapstructure:"lock_timeout" json:"lock_timeout" yaml:"lock_timeout"`
 }
 
 type Config struct {
