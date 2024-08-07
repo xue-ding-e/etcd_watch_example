@@ -1,0 +1,8 @@
+database: # 数据库连接参数
+  dsn: "root:123456@tcp(127.0.0.1:3306)/etcd_goods_test?parseTime=true"
+
+etcd: # etcd连接参数 根据实际需要更改
+  endpoints:
+    - "192.168.1.223:2379"
+  dial_timeout: 5s #初次连接etcd的超时时间
+  lock_timeout: 10s #每次请求获取锁的超时时间 上下文超时
